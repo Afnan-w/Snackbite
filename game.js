@@ -54,6 +54,12 @@ const k = kaplay({
 const canvas = k.canvas;
 const boardWrap = document.getElementById("board-wrap");
 
+// KAPLAY pins the canvas to its logical resolution with an inline style;
+// clear it so CSS (width/height 100%) can size the grid into the bezel's
+// inner screen area instead of overflowing it.
+canvas.style.width = "";
+canvas.style.height = "";
+
 /* ==========================================================================
    2. Game state
    ========================================================================== */
@@ -503,8 +509,8 @@ function fitBoard() {
     );
     const size = Math.max(160, Math.min(BOARD_W, Math.floor(Math.min(availW, maxH))));
 
-    canvas.style.width = size + "px";
-    canvas.style.height = size + "px";
+    // The canvas fills the box's inner screen area via CSS (width/height 100%),
+    // so only the bezel needs an explicit size.
     boardWrap.style.width = size + "px";
     boardWrap.style.height = size + "px";
 }
