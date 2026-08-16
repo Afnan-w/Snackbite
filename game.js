@@ -34,7 +34,7 @@ const SPEED_STEP_POINTS = 40;         // difficulty bumps every N points
 const SPEED_STEP_FACTOR = 0.9;        // interval is multiplied by this per bump
 
 const BONUS_LIFETIME = 6;             // seconds a bonus snack stays on the board
-const SWIPE_THRESHOLD = 20;           // px of travel before a swipe counts
+const SWIPE_THRESHOLD = 16;           // px of travel before a swipe counts
 const MAX_DIR_QUEUE = 3;              // buffered direction changes
 const HIGHSCORE_KEY = "snackbite.highscore";
 
@@ -144,79 +144,98 @@ function queueDirection(nx, ny) {
 }
 
 // --- Desktop: Arrow keys + WASD ---
-// Bound natively (not via KAPLAY's onKeyPress) so a press registers the moment
-// the key goes down, instead of being deferred to the next frame's input tick
-// and skipped on auto-repeat — same fix as the restart key. Holding a key is
-// safe: queueDirection discards duplicate and reverse directions.
+// A single native keydown listener drives everything: direction keys while
+// playing, restart keys when the round is over. Binding to the DOM directly
+// (instead of KAPLAY's onKeyPress, which defers every press to the next
+// frame's input tick and skips auto-repeat) means a press is handled the
+// instant the key goes down, and a held key keeps registering. One listener
+// also means a keydown is processed in a single pass — no per-key work is
+// wasted — and queueDirection discards duplicate/reverse directions.
 const KEY_DIRS = {
     arrowup: [0, -1], w: [0, -1],
     arrowdown: [0, 1], s: [0, 1],
     arrowleft: [-1, 0], a: [-1, 0],
     arrowright: [1, 0], d: [1, 0],
 };
+const RESTART_KEYS = new Set(["r", "enter", " "]);
 
 document.addEventListener("keydown", (e) => {
-    const dir = KEY_DIRS[e.key.toLowerCase()];
-    if (!dir) return;
-    if (e.key.startsWith("Arrow")) e.preventDefault(); // keep arrows from scrolling
-    queueDirection(dir[0], dir[1]);
-});
-
-// Restart keys (desktop). Bound directly to the DOM instead of KAPLAY's
-// onKeyPress, which defers every press to the next frame's input tick and
-// skips auto-repeat (f.repeat) events. A native keydown is handled the moment
-// the key goes down, and repeat presses are accepted, so a restart press is
-// never lost to frame timing or a held key.
-document.addEventListener("keydown", (e) => {
-    if (state.status !== "over") return;
     const key = e.key.toLowerCase();
-    if (key === "r" || key === "enter" || key === " ") restart();
+
+    if (state.status === "playing") {
+        const dir = KEY_DIRS[key];
+        if (!dir) return;
+        if (e.key.startsWith("Arrow")) e.preventDefault(); // keep arrows from scrolling
+        queueDirection(dir[0], dir[1]);
+        return;
+    }
+
+    if (state.status === "over" && RESTART_KEYS.has(key)) {
+        e.preventDefault(); // keep Space/Enter from scrolling or re-triggering a button
+        restart();
+    }
 });
 
-// --- Mobile / tablet: swipe on the game canvas ---
-// Plain native touch events; no library. touchstart/touchend delta decides
-// the dominant axis. A short movement (below the threshold) is a "tap".
-let touchStart = null;
+// --- Mobile / tablet: swipe steering on the game canvas ---
+// Directions are detected DURING the swipe (on touchmove), not on finger
+// lift, so a turn registers the moment the thumb crosses the threshold — no
+// waiting for touchend. After each registered turn the anchor resets, letting
+// one continuous swipe steer around corners. `touch-action: none` (CSS) tells
+// the browser the board never scrolls, so touch events are delivered
+// immediately instead of being delayed by scroll/zoom disambiguation. A tap
+// (movement below the threshold) restarts on the game-over screen.
+let touchAnchor = null;
 
 function onTouchStart(e) {
     e.preventDefault();
     const t = e.changedTouches[0];
-    touchStart = { x: t.clientX, y: t.clientY, at: performance.now() };
+    touchAnchor = { x: t.clientX, y: t.clientY };
 }
 
 function onTouchMove(e) {
     e.preventDefault(); // keep swipes from scrolling / refreshing the page
-}
-
-function onTouchEnd(e) {
-    e.preventDefault();
-    if (!touchStart) return;
+    if (!touchAnchor || state.status !== "playing") return;
     const t = e.changedTouches[0];
-    const dx = t.clientX - touchStart.x;
-    const dy = t.clientY - touchStart.y;
-    const dt = performance.now() - touchStart.at;
-    touchStart = null;
+    const dx = t.clientX - touchAnchor.x;
+    const dy = t.clientY - touchAnchor.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return;
 
-    // Tap = restart (shown on the game-over screen).
-    if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) {
-        if (state.status === "over") restart();
-        return;
-    }
-
-    if (state.status !== "playing") return;
     if (Math.abs(dx) > Math.abs(dy)) {
         queueDirection(dx > 0 ? 1 : -1, 0);
     } else {
         queueDirection(0, dy > 0 ? 1 : -1);
     }
+    touchAnchor = { x: t.clientX, y: t.clientY };
+}
+
+function onTouchEnd(e) {
+    e.preventDefault();
+    if (!touchAnchor) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchAnchor.x;
+    const dy = t.clientY - touchAnchor.y;
+    touchAnchor = null;
+
+    // Tap = restart (shown on the game-over screen).
+    if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) {
+        if (state.status === "over") restart();
+    }
+}
+
+function onTouchCancel() {
+    touchAnchor = null;
 }
 
 boardWrap.addEventListener("touchstart", onTouchStart, { passive: false });
 boardWrap.addEventListener("touchmove", onTouchMove, { passive: false });
 boardWrap.addEventListener("touchend", onTouchEnd, { passive: false });
+boardWrap.addEventListener("touchcancel", onTouchCancel, { passive: false });
 
-// Mouse/desktop tap also restarts (harmless bonus for trackpad users).
-k.onClick(() => { if (state.status === "over") restart(); });
+// Mouse/desktop tap also restarts (harmless bonus for trackpad users). Bound
+// natively so it reacts the same frame as the touch tap.
+boardWrap.addEventListener("click", () => {
+    if (state.status === "over") restart();
+});
 
 // iOS pinch & long-press niceties.
 document.addEventListener("gesturestart", (e) => e.preventDefault());
@@ -250,9 +269,15 @@ function step() {
 
     const ate = state.snack && state.snack.x === nx && state.snack.y === ny;
 
-    // Self-collision. The tail cell vacates unless we are growing (ate).
-    const body = ate ? state.snake : state.snake.slice(0, -1);
-    if (isOccupied(nx, ny, body)) return gameOver();
+    // Self-collision. The tail cell vacates unless we are growing (ate), so a
+    // head moving into the tail's cell is safe; any other segment is lethal.
+    // (No per-step array copy — the check runs against the live snake.)
+    if (ate) {
+        if (isOccupied(nx, ny, state.snake)) return gameOver();
+    } else {
+        const tail = state.snake[state.snake.length - 1];
+        if ((tail.x !== nx || tail.y !== ny) && isOccupied(nx, ny, state.snake)) return gameOver();
+    }
 
     state.snake.unshift({ x: nx, y: ny });
 
