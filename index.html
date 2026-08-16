@@ -105,27 +105,6 @@
     min-height: 40px;
   }
 
-  /* Logo hero frame — makes the (dark) logo pop against the dark theme */
-  #logo-frame {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 16px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(10, 18, 40, .72), rgba(18, 28, 58, .72));
-    border: 1px solid var(--panel-border);
-    box-shadow: 0 0 26px var(--cyan-glow), inset 0 0 18px rgba(34, 211, 238, .10);
-  }
-
-  #logo {
-    display: block;
-    height: min(20vh, 380px);      /* tall portrait logo → cap by height */
-    width: auto;
-    max-width: 100%;
-    border-radius: 8px;
-    pointer-events: none;
-  }
-
   .stats-row {
     display: flex;
     align-items: center;
@@ -296,8 +275,6 @@
         calc(10px + env(safe-area-inset-bottom))
         calc(10px + env(safe-area-inset-left));
     }
-    #logo { height: min(15vh, 150px); }
-    #logo-frame { padding: 6px 10px; }
     .stats-row { gap: 12px; }
     .stat { min-width: 78px; padding: 6px 10px; }
     .stat .value { font-size: 19px; }
@@ -305,23 +282,11 @@
     #legend { font-size: 11px; }
   }
 
-  /* Tablets (portrait + landscape) */
-  @media (min-width: 600px) and (max-width: 1024px) {
-    #logo { height: min(22vh, 420px); }
-  }
-
   /* Short screens (phone landscape etc.) — keep the board big */
   @media (max-height: 500px) {
     #app { gap: 8px; }
-    #logo { height: min(12vh, 110px); }
-    #logo-frame { padding: 5px 10px; }
     .stat { padding: 4px 10px; min-width: 74px; }
     .stat .value { font-size: 17px; }
-  }
-
-  /* Large desktop */
-  @media (min-width: 1025px) {
-    #logo { height: min(22vh, 400px); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -334,9 +299,6 @@
 <body>
   <div id="app">
     <header id="hud">
-      <div id="logo-frame">
-        <img id="logo" src="logo.png" alt="Snackbite">
-      </div>
       <div class="stats-row">
         <div class="stat">
           <span class="label">Score</span>

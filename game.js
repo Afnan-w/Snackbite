@@ -149,10 +149,16 @@ for (const [key, dir] of Object.entries(KEY_DIRS)) {
     k.onKeyPress(key, () => queueDirection(dir[0], dir[1]));
 }
 
-// Restart keys (desktop).
-k.onKeyPress("r", () => { if (state.status === "over") restart(); });
-k.onKeyPress("enter", () => { if (state.status === "over") restart(); });
-k.onKeyPress("space", () => { if (state.status === "over") restart(); });
+// Restart keys (desktop). Bound directly to the DOM instead of KAPLAY's
+// onKeyPress, which defers every press to the next frame's input tick and
+// skips auto-repeat (f.repeat) events. A native keydown is handled the moment
+// the key goes down, and repeat presses are accepted, so a restart press is
+// never lost to frame timing or a held key.
+document.addEventListener("keydown", (e) => {
+    if (state.status !== "over") return;
+    const key = e.key.toLowerCase();
+    if (key === "r" || key === "enter" || key === " ") restart();
+});
 
 // --- Mobile / tablet: swipe on the game canvas ---
 // Plain native touch events; no library. touchstart/touchend delta decides
