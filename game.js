@@ -484,11 +484,16 @@ function saveHighScore(value) {
 // Cell/pixel aspect ratio is preserved (square board), capped at the logical
 // size so the board never upscales beyond 100% on huge monitors.
 function fitBoard() {
+    const app = document.getElementById("app");
     const hud = document.getElementById("hud").getBoundingClientRect();
     const legend = document.getElementById("legend").getBoundingClientRect();
+    // #app's flex `gap` puts a spacing above and below the board; the size
+    // must account for both or the board ends up too tall and the flex
+    // column squashes the HUD into the board.
+    const gap = parseFloat(getComputedStyle(app).gap) || 0;
     const margin = 14;
     const availW = window.innerWidth - margin * 2;
-    const availH = window.innerHeight - margin * 2 - hud.height - legend.height;
+    const availH = window.innerHeight - margin * 2 - hud.height - legend.height - gap * 2;
     const size = Math.max(160, Math.min(BOARD_W, Math.floor(Math.min(availW, availH))));
 
     canvas.style.width = size + "px";
