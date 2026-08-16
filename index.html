@@ -457,6 +457,63 @@
 
   #mute-btn:hover { border-color: var(--cyan); }
   #mute-btn:focus { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+  /* ---------- On-screen D-pad (touch devices only) ---------- */
+  #dpad {
+    display: none;
+    position: fixed;
+    right: calc(14px + env(safe-area-inset-right));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    z-index: 3;               /* above the board, below the CRT overlay/start screen */
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 46px);
+    gap: 4px;
+  }
+
+  body.touch-device #dpad { display: grid; }
+
+  .dpad-btn {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--cyan);
+    background: rgba(14, 10, 34, .62);
+    border: 2px solid rgba(34, 211, 238, .5);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(34, 211, 238, .12), inset 0 0 8px rgba(34, 211, 238, .06);
+    cursor: pointer;
+    touch-action: none;       /* taps register instantly, no scroll/zoom delay */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .dpad-btn:active {
+    color: #fff;
+    background: rgba(34, 211, 238, .4);
+    box-shadow: 0 0 16px rgba(34, 211, 238, .45);
+  }
+
+  .dpad-btn.up { grid-column: 2; grid-row: 1; }
+  .dpad-btn.left { grid-column: 1; grid-row: 2; }
+  .dpad-btn.down { grid-column: 2; grid-row: 3; }
+  .dpad-btn.right { grid-column: 3; grid-row: 2; }
+
+  @media (max-height: 500px) {
+    #dpad {
+      grid-template-columns: repeat(3, 28px);
+      grid-template-rows: repeat(3, 28px);
+      gap: 3px;
+      right: calc(8px + env(safe-area-inset-right));
+      bottom: calc(8px + env(safe-area-inset-bottom));
+    }
+    .dpad-btn { width: 28px; height: 28px; font-size: 11px; border-radius: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -497,8 +554,15 @@
 
     <footer id="legend">
       <span class="hl">🍎 10</span> <span class="hl">🍒 25</span> <span class="hl">⭐ 50</span> <span class="hl">⚡ speed</span> <span class="hl">🐌 slow</span><br>
-      <span class="hl">←↑→↓ / WASD</span> <span class="hl">swipe on touch</span>
+      <span class="hl">←↑→↓ / WASD</span> <span class="hl">swipe or D-pad on touch</span>
     </footer>
+  </div>
+
+  <div id="dpad" aria-hidden="true">
+    <button class="dpad-btn up" data-dir="up">▲</button>
+    <button class="dpad-btn left" data-dir="left">◀</button>
+    <button class="dpad-btn down" data-dir="down">▼</button>
+    <button class="dpad-btn right" data-dir="right">▶</button>
   </div>
 
   <script src="kaplay.js"></script>

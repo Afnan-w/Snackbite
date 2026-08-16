@@ -5,7 +5,7 @@ An offline 2D snake game built with **[KAPLAY](https://kaplayjs.com/)** — a li
 ## 🕹️ How to Play
 
 - **Desktop:** Arrow keys / **W A S D** to move; **R / Enter / Space** to restart after game over; tap the canvas to restart too.
-- **Touch:** Swipe on the game canvas to change direction; a short swipe is a tap-to-restart on game over.
+- **Touch:** Swipe on the game canvas or use the on-screen **D-pad** to change direction; a short swipe (or tap) is a tap-to-restart on game over.
 
 ## 🎯 Objective
 
@@ -45,7 +45,8 @@ Snackbite/
 ├── index.html       — HTML, CSS (retro arcade theme), and inline <script> tags
 ├── game.js          — Game logic, input, rendering, high‑score persistence
 ├── kaplay.js       — KAPLAY v3001 library (vendored)
-└── logo.png        — 784×1168 dark logo (used as favicon; on-page logo removed)
+├── logo.png        — 784×1168 dark logo (used as favicon; on-page logo removed)
+└── bgsong.mp3      — optional looping background track (drop it next to index.html)
 ```
 
 ## 🚀 Running
@@ -72,15 +73,21 @@ Works in Chrome, Edge, Firefox, and Safari. Touch‑friendly on mobile & tablet.
 
 | Action | Keyboard | Touch |
 |--------|----------|-------|
-| Move up / left / down / right | ⬅️ ⬆️ ⬇️ ➡️  / W A S D | Swipe on canvas |
+| Move up / left / down / right | ⬅️ ⬆️ ⬇️ ➡️  / W A S D | Swipe on canvas or on-screen D-pad |
 | Restart (game over) | R / Enter / Space | Tap on canvas |
-| Pause / resume | — | — |
+| Sound on / off | — | 🔊 / 🔇 corner button |
+
+## 🔊 Sound
+
+- **Background music:** plays a looping `bgsong.mp3` (drop your own file next to `index.html`; the game stays silent if it's missing).
+- **Effects:** a two-note "munch" plays when the snake eats (a higher chime for bonus snacks), synthesized with the Web Audio API.
+- Music and effects start on the first **PLAY** press (browsers require a user gesture) and are muted with the 🔊 corner button; the mute choice persists in `localStorage`.
 
 ## 📝 Notes
 
 - The on‑page logo was removed per user request; the `logo.png` file remains as the **favicon** (tab icon only).
 - The game theme was restyled into a full **retro arcade** look: CRT scanlines, vignette, marquee title, cabinet bulges, and a bezel‑style board frame.
-- All audio is omitted — this is a silent offline game.
+- Sound is fully optional: eat effects are generated in‑browser, and the background track only plays if `bgsong.mp3` is present.
 - High score persists across sessions via `localStorage`.
 
 ---
