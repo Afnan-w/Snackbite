@@ -138,16 +138,23 @@ function queueDirection(nx, ny) {
 }
 
 // --- Desktop: Arrow keys + WASD ---
+// Bound natively (not via KAPLAY's onKeyPress) so a press registers the moment
+// the key goes down, instead of being deferred to the next frame's input tick
+// and skipped on auto-repeat — same fix as the restart key. Holding a key is
+// safe: queueDirection discards duplicate and reverse directions.
 const KEY_DIRS = {
-    up: [0, -1], w: [0, -1],
-    down: [0, 1], s: [0, 1],
-    left: [-1, 0], a: [-1, 0],
-    right: [1, 0], d: [1, 0],
+    arrowup: [0, -1], w: [0, -1],
+    arrowdown: [0, 1], s: [0, 1],
+    arrowleft: [-1, 0], a: [-1, 0],
+    arrowright: [1, 0], d: [1, 0],
 };
 
-for (const [key, dir] of Object.entries(KEY_DIRS)) {
-    k.onKeyPress(key, () => queueDirection(dir[0], dir[1]));
-}
+document.addEventListener("keydown", (e) => {
+    const dir = KEY_DIRS[e.key.toLowerCase()];
+    if (!dir) return;
+    if (e.key.startsWith("Arrow")) e.preventDefault(); // keep arrows from scrolling
+    queueDirection(dir[0], dir[1]);
+});
 
 // Restart keys (desktop). Bound directly to the DOM instead of KAPLAY's
 // onKeyPress, which defers every press to the next frame's input tick and
