@@ -393,10 +393,58 @@
     .card .hint { animation: none; }
     #effectHud { transition: none; }
   }
+
+  /* ---------- Start screen ---------- */
+  #start-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: none;
+    background: rgba(10, 5, 22, .98);
+  }
+
+  #start-screen.active { pointer-events: auto; }
+
+  .start-panel {
+    position: relative;
+    text-align: center;
+    max-width: 90%;
+    margin: auto;
+    padding: 40px 20px;
+    background: linear-gradient(180deg, rgba(46, 12, 70, .95), rgba(10, 5, 26, .98));
+    border: 4px solid var(--pink);
+    border-radius: 12px;
+    box-shadow: 0 0 32px var(--pink-glow);
+  }
+
+  #start-btn {
+    font-family: 'Press Start 2P', ui-monospace, monospace;
+    font-size: 28px;
+    padding: 16px 40px;
+    background: var(--pink);
+    color: #0a0517;
+    border: 4px solid var(--pink);
+    border-radius: 12px;
+    cursor: pointer;
+    margin-top: 24px;
+    transition: transform .15s ease;
+  }
+
+  #start-btn:hover { transform: scale(1.05); }
+
+  #start-btn:focus { outline: 2px solid #fff; outline-offset: 4px; }
 </style>
 </head>
 <body>
   <div id="crt" aria-hidden="true"></div>
+
+  <div id="start-screen">
+    <div class="start-panel">
+      <h1>SNACKBITE</h1>
+      <button id="start-btn">PLAY</button>
+    </div>
+  </div>
+
   <div id="app">
     <header id="hud">
       <div id="marquee"><span>SNACKBITE</span></div>

@@ -509,6 +509,22 @@ window.addEventListener("orientationchange", fitBoard);
    Boot
    ========================================================================== */
 
+// Start screen: wait for player to press PLAY before starting the game.
+const startScreen = document.getElementById('start-screen');
+const startBtn = document.getElementById('start-btn');
+
+startBtn.addEventListener('click', () => {
+	startScreen.style.display = 'none';
+	restart();
+	fitBoard();
+	if (document.fonts && document.fonts.ready) {
+		document.fonts.ready.then(fitBoard);
+	}
+});
+
+// Initially show the start screen.
+startScreen.style.display = 'block';
+
 restart();
 fitBoard();
 // Re-measure after fonts (emoji in the legend) settle, in case they change height.
