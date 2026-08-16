@@ -67,7 +67,7 @@ const state = {
     snack: null,      // { type, x, y, spawnTime }
     effect: null,     // { type, mult, until } from ⚡/🐌 | null
     moveAccum: 0,     // time bank for grid stepping
-    status: "playing",// "playing" | "over"
+    status: "idle",   // "idle" (on the start screen) | "playing" | "over"
 };
 
 // True when the device supports touch (used for the restart hint text).
@@ -351,6 +351,7 @@ function drawSnake() {
 // Two little eyes on the head, offset along the direction of travel.
 function drawEyes() {
     const head = state.snake[0];
+    if (!head) return;
     const d = state.dir;
     const cx = head.x * LOGICAL_CELL + LOGICAL_CELL / 2;
     const cy = head.y * LOGICAL_CELL + LOGICAL_CELL / 2;
@@ -509,7 +510,7 @@ window.addEventListener("orientationchange", fitBoard);
    Boot
    ========================================================================== */
 
-// Start screen: wait for player to press PLAY before starting the game.
+// Big PLAY button: the game stays idle until it's pressed, then it starts.
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
 
@@ -522,10 +523,6 @@ startBtn.addEventListener('click', () => {
 	}
 });
 
-// Initially show the start screen.
-startScreen.style.display = 'block';
-
-restart();
 fitBoard();
 // Re-measure after fonts (emoji in the legend) settle, in case they change height.
 if (document.fonts && document.fonts.ready) {
