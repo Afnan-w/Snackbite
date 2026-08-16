@@ -367,6 +367,10 @@
     background: rgba(20, 10, 40, .55);
   }
 
+  /* Touch users get the on-screen D-pad, so the keyboard/swipe hint line is
+     redundant there. Hiding it frees vertical space for the pad itself. */
+  body.touch-device #legend .ctrl { display: none; }
+
   /* ---------- Responsive: phones, tablets, short/landscape ---------- */
   @media (max-width: 480px) {
     #app {
@@ -504,15 +508,21 @@
   .dpad-btn.down { grid-column: 2; grid-row: 3; }
   .dpad-btn.right { grid-column: 3; grid-row: 2; }
 
-  @media (max-height: 500px) {
-    #dpad {
-      grid-template-columns: repeat(3, 28px);
-      grid-template-rows: repeat(3, 28px);
-      gap: 3px;
-      right: calc(8px + env(safe-area-inset-right));
-      bottom: calc(8px + env(safe-area-inset-bottom));
-    }
-    .dpad-btn { width: 28px; height: 28px; font-size: 11px; border-radius: 6px; }
+  /* Compact pad when there isn't enough vertical space for the full-size one
+     (layoutDpad() toggles this class after measuring the gap between the board
+     and the footer). Full-size is 3x46px buttons + 2x4px gaps = 146px tall;
+     compact is 3x28px buttons + 2x3px gaps = 90px tall. */
+  #dpad.pad-compact {
+    grid-template-columns: repeat(3, 28px);
+    grid-template-rows: repeat(3, 28px);
+    gap: 3px;
+    right: calc(8px + env(safe-area-inset-right));
+  }
+  #dpad.pad-compact .dpad-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    border-radius: 6px;
   }
 </style>
 </head>
@@ -554,7 +564,7 @@
 
     <footer id="legend">
       <span class="hl">🍎 10</span> <span class="hl">🍒 25</span> <span class="hl">⭐ 50</span> <span class="hl">⚡ speed</span> <span class="hl">🐌 slow</span><br>
-      <span class="hl">←↑→↓ / WASD</span> <span class="hl">swipe or D-pad on touch</span>
+      <span class="ctrl"><span class="hl">←↑→↓ / WASD</span> <span class="hl">swipe or D-pad on touch</span></span>
     </footer>
   </div>
 

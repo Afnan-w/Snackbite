@@ -265,6 +265,36 @@ for (const btn of document.querySelectorAll(".dpad-btn")) {
     });
 }
 
+// Place the pad so it never covers the footer text or the game board. The
+// board is centered and the footer sits at the viewport bottom, so the pad is
+// positioned in the free band between the board's bottom edge and the footer
+// (hugging the right edge). If that band is shorter than the full-size pad it
+// drops to the compact size (via the .pad-compact class). On very small
+// screens there is no band at all — then the pad sits above the footer and is
+// allowed to graze the board's bottom-right corner, since covering a couple of
+// grid cells is far less annoying than covering the legend text.
+const dpadEl = document.getElementById("dpad");
+function layoutDpad() {
+    if (!dpadEl || !isTouchDevice) return;
+    const gap = 12;
+    const legend = document.getElementById("legend").getBoundingClientRect();
+    const board = boardWrap.getBoundingClientRect();
+    const band = legend.top - board.bottom - gap;
+    dpadEl.classList.toggle("pad-compact", band < 146);
+    const padH = dpadEl.offsetHeight;
+    // First choice: sit just above the legend, clear of the board too.
+    let top = legend.top - gap - padH;
+    // If that would rise above the board's bottom edge, sit just below the
+    // board instead — but only if it then clears the legend.
+    if (top < board.bottom + gap) {
+        const below = board.bottom + gap;
+        if (below + padH <= legend.top - gap) top = below;
+    }
+    // Never fall off the bottom of the screen.
+    top = Math.min(top, window.innerHeight - padH - gap);
+    dpadEl.style.bottom = (window.innerHeight - top - padH) + "px";
+}
+
 // Don't let a long tab-switch trigger a burst of moves.
 document.addEventListener("visibilitychange", () => { state.moveAccum = 0; });
 
@@ -564,6 +594,7 @@ function fitBoard() {
     // so only the bezel needs an explicit size.
     boardWrap.style.width = size + "px";
     boardWrap.style.height = size + "px";
+    layoutDpad();
 }
 
 window.addEventListener("resize", fitBoard);
