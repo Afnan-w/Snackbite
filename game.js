@@ -628,6 +628,7 @@ function createBgAudio() {
     try {
         const a = new Audio("bgsong.mp3");
         a.loop = true;
+        a.volume = 0.3;   // background music sits under the eat effects, not over them
         return a;
     } catch {
         return null;
