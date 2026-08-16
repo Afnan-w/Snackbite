@@ -114,7 +114,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between; /* HUD pins top, legend pins bottom */
     gap: 12px;
     padding:
       calc(14px + env(safe-area-inset-top))
@@ -244,10 +244,11 @@
 
   /* ---------- Board: arcade monitor bezel ---------- */
   #board-wrap {
-    position: relative;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     flex: 0 0 auto;
-    margin-top: auto;               /* board is the visual centerpiece: */
-    margin-bottom: auto;            /* header pins top, legend pins bottom */
     padding: 10px;
     border-radius: 12px;
     background: linear-gradient(180deg, #0e0a20, #07051a);

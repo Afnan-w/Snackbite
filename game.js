@@ -488,14 +488,20 @@ function fitBoard() {
     const app = document.getElementById("app");
     const hud = document.getElementById("hud").getBoundingClientRect();
     const legend = document.getElementById("legend").getBoundingClientRect();
-    // #app's flex `gap` puts a spacing above and below the board; the size
-    // must account for both or the board ends up too tall and the flex
-    // column squashes the HUD into the board.
+    // The board is centered on the viewport (#board-wrap is absolutely
+    // centered), so its top edge must clear the HUD and its bottom edge the
+    // legend. Flex auto-margins alone can't do this: the HUD is taller than
+    // the legend, which pushed the board off-center.
     const gap = parseFloat(getComputedStyle(app).gap) || 0;
     const margin = 14;
     const availW = window.innerWidth - margin * 2;
-    const availH = window.innerHeight - margin * 2 - hud.height - legend.height - gap * 2;
-    const size = Math.max(160, Math.min(BOARD_W, Math.floor(Math.min(availW, availH))));
+    const hudBottom = margin + hud.height;
+    const legendTop = window.innerHeight - margin - legend.height;
+    const maxH = Math.min(
+        window.innerHeight - 2 * (hudBottom + gap),
+        2 * (legendTop - gap) - window.innerHeight
+    );
+    const size = Math.max(160, Math.min(BOARD_W, Math.floor(Math.min(availW, maxH))));
 
     canvas.style.width = size + "px";
     canvas.style.height = size + "px";
