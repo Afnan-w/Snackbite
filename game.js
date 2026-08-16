@@ -12,6 +12,7 @@
      6. Rendering
      7. Game over / restart
      8. Responsive sizing
+     9. Sound & music (procedural Web Audio)
    ========================================================================== */
 
 "use strict";
@@ -283,6 +284,7 @@ function step() {
 
     if (ate) {
         state.score += state.snack.type.points;
+        playEat(state.snack.type.id);
         applyEffect(state.snack.type.effect);
         updateHUD();
         spawnSnack();   // grow = don't pop the tail
@@ -447,6 +449,7 @@ function gameOver() {
 }
 
 function restart() {
+    initAudio(); // first restart follows a user gesture (PLAY / R / tap)
     state.status = "playing";
     state.score = 0;
     state.effect = null;
@@ -542,6 +545,174 @@ function fitBoard() {
 
 window.addEventListener("resize", fitBoard);
 window.addEventListener("orientationchange", fitBoard);
+
+/* ==========================================================================
+   9. Sound & music — procedural Web Audio, no files needed
+   ========================================================================== */
+
+// All audio is synthesized at runtime with the Web Audio API, so the game
+// stays offline and self-contained (no mp3s to ship or load). The
+// AudioContext is created on the first restart, because browsers only start
+// audio inside a user gesture; every call is guarded, so a blocked context,
+// a muted tab, or a headless test environment can never crash the game.
+
+const MUTE_KEY = "snackbite.muted";
+const SOUND = {
+    ctx: null,       // AudioContext (created on the first PLAY)
+    master: null,    // master gain node (0 when muted)
+    scheduler: null, // setInterval id for the music lookahead loop
+    nextStep: 0,     // time the next music note is scheduled for
+    step: 0,         // current step in the loop (0..31)
+    muted: loadMutedSetting(),
+    started: false,  // whether initAudio has run (once)
+};
+
+const muteBtn = document.getElementById("mute-btn");
+
+function loadMutedSetting() {
+    try { return localStorage.getItem(MUTE_KEY) === "1"; } catch { return false; }
+}
+
+function saveMutedSetting(muted) {
+    try { localStorage.setItem(MUTE_KEY, muted ? "1" : "0"); } catch {}
+}
+
+// One note: oscillator + per-note gain envelope (fast attack, exp decay).
+function playNote(freq, when, dur, vol, type) {
+    const osc = SOUND.ctx.createOscillator();
+    const gain = SOUND.ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, when);
+    gain.gain.linearRampToValueAtTime(vol, when + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    osc.connect(gain);
+    gain.connect(SOUND.master);
+    osc.start(when);
+    osc.stop(when + dur + 0.05);
+}
+
+// Short noise burst (high-passed) for the hi-hat.
+function playHat(when) {
+    const sr = SOUND.ctx.sampleRate;
+    const buf = SOUND.ctx.createBuffer(1, Math.floor(sr * 0.05), sr);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    }
+    const src = SOUND.ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = SOUND.ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 6000;
+    const gain = SOUND.ctx.createGain();
+    gain.gain.value = 0.05;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(SOUND.master);
+    src.start(when);
+}
+
+// Low "kick" thump on each bar's downbeat.
+function playKick(when) {
+    const osc = SOUND.ctx.createOscillator();
+    const gain = SOUND.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, when);
+    osc.frequency.exponentialRampToValueAtTime(45, when + 0.12);
+    gain.gain.setValueAtTime(0.35, when);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.14);
+    osc.connect(gain);
+    gain.connect(SOUND.master);
+    osc.start(when);
+    osc.stop(when + 0.16);
+}
+
+// 32-step loop, 8th notes at 120 BPM (~4 s) in the classic arcade cadence
+// Am–F–C–G: driving triangle bass, square-wave lead, off-beat hats, and a
+// kick on each downbeat.
+const STEP_DUR = 60 / 120 / 2;
+const BASS_ROOTS = [110.0, 87.31, 130.81, 98.0]; // Am F C G
+const MELODY = [
+    [0, 440.0], [2, 523.25], [4, 659.25], [6, 880.0],
+    [8, 349.23], [10, 440.0], [12, 523.25], [14, 698.46],
+    [16, 523.25], [18, 659.25], [20, 783.99], [22, 659.25],
+    [24, 392.0], [26, 523.25], [28, 587.33], [30, 523.25],
+];
+
+function scheduleMusic() {
+    if (!SOUND.ctx) return;
+    if (SOUND.nextStep < SOUND.ctx.currentTime) SOUND.nextStep = SOUND.ctx.currentTime;
+    const ahead = 0.35;
+    while (SOUND.nextStep < SOUND.ctx.currentTime + ahead) {
+        const when = SOUND.nextStep;
+        const step = SOUND.step % 32;
+        const bar = Math.floor(step / 4);
+
+        playNote(step % 4 === 3 ? BASS_ROOTS[bar] * 2 : BASS_ROOTS[bar], when, STEP_DUR * 0.95, 0.42, "triangle");
+        if (step % 4 === 0) playKick(when);
+        if (step % 2 === 1) playHat(when);
+        const mel = MELODY[step];
+        if (mel) playNote(mel[1], when, STEP_DUR * 0.9, 0.16, "square");
+
+        SOUND.nextStep += STEP_DUR;
+        SOUND.step++;
+    }
+}
+
+function startMusic() {
+    if (!SOUND.ctx || SOUND.muted || SOUND.scheduler !== null) return;
+    SOUND.nextStep = SOUND.ctx.currentTime + 0.05;
+    scheduleMusic();
+    SOUND.scheduler = setInterval(scheduleMusic, 100);
+}
+
+function stopMusic() {
+    if (SOUND.scheduler !== null) {
+        clearInterval(SOUND.scheduler);
+        SOUND.scheduler = null;
+    }
+}
+
+// Set up the audio graph once. Every restart path (PLAY click, R key, tap)
+// runs inside a user gesture, which is what the autoplay policy requires.
+function initAudio() {
+    if (SOUND.started) return;
+    SOUND.started = true;
+    try {
+        const Ctor = window.AudioContext || window.webkitAudioContext;
+        if (!Ctor) return;
+        SOUND.ctx = new Ctor();
+        SOUND.master = SOUND.ctx.createGain();
+        SOUND.master.gain.value = SOUND.muted ? 0 : 0.6;
+        SOUND.master.connect(SOUND.ctx.destination);
+        if (SOUND.ctx.state === "suspended") SOUND.ctx.resume().catch(() => {});
+        startMusic();
+    } catch {
+        SOUND.ctx = null; // audio unavailable (blocked, headless, etc.)
+    }
+}
+
+// Eat sound: a quick two-note "munch"; bonus snacks (⭐⚡🐌) get a higher chime.
+function playEat(typeId) {
+    if (!SOUND.ctx || SOUND.muted) return;
+    const bonus = typeId === "star" || typeId === "bolt" || typeId === "snail";
+    const t = SOUND.ctx.currentTime;
+    playNote(bonus ? 659.25 : 523.25, t, 0.07, 0.4, "square");
+    playNote(bonus ? 987.77 : 783.99, t + 0.06, 0.09, 0.4, "square");
+}
+
+function setMuted(muted) {
+    SOUND.muted = muted;
+    saveMutedSetting(muted);
+    if (SOUND.master) SOUND.master.gain.value = muted ? 0 : 0.6;
+    muteBtn.textContent = muted ? "🔇" : "🔊";
+    if (muted) stopMusic();
+    else startMusic();
+}
+
+muteBtn.addEventListener("click", () => setMuted(!SOUND.muted));
+muteBtn.textContent = SOUND.muted ? "🔇" : "🔊";
 
 /* ==========================================================================
    Boot

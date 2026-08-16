@@ -137,6 +137,7 @@
   /* Arcade marquee title */
   #marquee {
     position: relative;
+    width: fit-content;   /* shrink-wrap so the corner mute button never overlaps it */
     font-family: 'Press Start 2P', ui-monospace, monospace;
     font-size: clamp(15px, 4.4vw, 32px);
     letter-spacing: .16em;
@@ -431,10 +432,36 @@
   #start-btn:hover { transform: scale(1.06); }
   #start-btn:active { transform: scale(.95); }
   #start-btn:focus { outline: 3px solid #fff; outline-offset: 6px; }
+
+  /* ---------- Sound toggle ---------- */
+  #mute-btn {
+    position: fixed;
+    top: calc(10px + env(safe-area-inset-top));
+    right: calc(10px + env(safe-area-inset-right));
+    z-index: 10001;             /* above the start screen so it works pre-game */
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 21px;
+    line-height: 1;
+    border-radius: 8px;
+    border: 2px solid var(--panel-border);
+    background: linear-gradient(180deg, rgba(18, 12, 44, .85), rgba(8, 6, 22, .92));
+    box-shadow: 0 0 10px rgba(34, 211, 238, .22), inset 0 0 8px rgba(34, 211, 238, .05);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #mute-btn:hover { border-color: var(--cyan); }
+  #mute-btn:focus { outline: 2px solid var(--cyan); outline-offset: 3px; }
 </style>
 </head>
 <body>
   <div id="crt" aria-hidden="true"></div>
+  <button id="mute-btn" aria-label="Toggle sound" title="Toggle sound">🔊</button>
 
   <div id="start-screen">
     <button id="start-btn">PLAY</button>
