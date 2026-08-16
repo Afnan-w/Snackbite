@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!--
+  Viewport is locked (no user zoom) and the body uses touch-action:none so
+  swipe gestures drive the snake instead of scrolling / pull-to-refresh.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="logo.png" type="image/png">
+<link rel="apple-touch-icon" href="logo.png">
+<title>Snackbite</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #60eb96;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;      /* no pull-to-refresh / bounce */
+    touch-action: none;             /* swipes never scroll the page */
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  /* ---------- HUD (DOM, stays crisp at any DPI) ---------- */
+  #hud {
+    display: flex;
+    flex-direction: column;      /* logo on top, stats row below */
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  /* Logo — scales down on small screens, up to a desktop cap, aspect locked */
+  #logo {
+    display: block;
+    width: min(48vw, 320px);
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    pointer-events: none;
+  }
+
+  .stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    width: 100%;
+  }
+
+  /* Keep vertical space for board + legend on short / landscape screens */
+  @media (max-height: 520px) {
+    #logo { width: min(24vw, 130px); }
+  }
+
+  @media (min-width: 900px) and (min-height: 700px) {
+    #logo { width: min(34vw, 340px); }
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+
+  .stat .label {
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat .value {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Effect-snack timer pill (⚡ speed boost / 🐌 slow-down) */
+  #effectHud {
+    min-width: 92px;
+    min-height: 20px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  #effectHud.active { opacity: 1; }
+
+  /* ---------- Board + overlays ---------- */
+  #board-wrap {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  #game {
+    display: block;
+    border: 1px solid #232830;
+    border-radius: 12px;
+    background: #11151c;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 8, 14, .78);
+    border-radius: 12px;
+    z-index: 2;
+    text-align: center;
+    padding: 12px;
+  }
+
+  #overlay.hidden { display: none; }
+
+  .card h1 {
+    margin: 0 0 10px;
+    font-size: 26px;
+    color: #f85149;
+  }
+
+  .card .final {
+    margin: 4px 0;
+    font-size: 18px;
+    color: var(--text);
+  }
+
+  .card .best {
+    margin: 4px 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .card .hint {
+    margin-top: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* ---------- Legend / footer ---------- */
+  #legend {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  #legend .hl { color: var(--text); }
+</style>
+</head>
+<body>
+  <div id="app">
+    <header id="hud">
+      <img id="logo" src="logo.png" alt="Snackbite">
+      <div class="stats-row">
+        <div class="stat">
+          <span class="label">Score</span>
+          <span class="value" id="score">0</span>
+        </div>
+        <div id="effectHud" role="status"></div>
+        <div class="stat">
+          <span class="label">Best</span>
+          <span class="value" id="highScore">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div id="board-wrap">
+      <canvas id="game"></canvas>
+      <div id="overlay" class="hidden">
+        <div class="card">
+          <h1>Game Over</h1>
+          <p class="final" id="finalScore"></p>
+          <p class="best" id="finalBest"></p>
+          <p class="hint" id="restartHint"></p>
+        </div>
+      </div>
+    </div>
+
+    <footer id="legend">
+      <span class="hl">&#127826; 10</span> &middot; <span class="hl">&#127826; 25</span> &middot; <span class="hl">&#11088; 50</span><br>
+      <span class="hl">&#9889;</span> speed boost &middot; <span class="hl">&#128028;</span> slow-down<br>
+      <span class="hl">&#8592;&#8593;&#8594;&#8595;</span>/<span class="hl">WASD</span> to move &middot; swipe on touch
+    </footer>
+  </div>
+
+  <script src="kaplay.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
